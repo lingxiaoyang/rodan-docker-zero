@@ -1,0 +1,97 @@
+version: "3"
+services:
+  nginx:
+    build: ./nginx
+    container_name: nginx
+    depends_on:
+      - rodan-server
+    ports:
+      - "8080:80"  # Final port exposed to host
+    volumes:
+      - rodan_static:/var/www/static
+      - unix_socket:/var/run/unix_socket
+  rodan-server:
+    build:
+      context: ./rodan
+      dockerfile: Dockerfile-server
+    command: bash -c "./manage.py check && ./manage.py migrate && ENVS=`env` ./manage.py collectstatic --clear --noinput && uwsgi --disable-logging -s /var/run/unix_socket/rodan-server.sock --module rodan.wsgi_django:application"
+    depends_on:
+      - rabbitmq
+      - redis
+      - postgres
+    environment:
+      - DJANGO_ADMIN_URL=django_admin
+      - DJANGO_DEBUG_MODE=${DEBUG}
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+      - POSTGRES_DB=${RODAN_POSTGRES_DB}
+      - POSTGRES_USER=${RODAN_POSTGRES_USER}
+      - POSTGRES_PASSWORD=${RODAN_POSTGRES_PASSWORD}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - RODAN_PSQL_SUPERUSER_USERNAME=${RODAN_POSTGRES_SUPERUSER}
+      - RODAN_PSQL_SUPERUSER_PASSWORD=${RODAN_POSTGRES_SUPERUSER_PASSWORD}
+      - DJANGO_MEDIA_ROOT=
+      - DJANGO_ALLOWED_HOSTS=${HOSTNAME}
+      - SSL_COOKIE=False
+      - SSL_COOKIE_DOMAIN=${HOSTNAME}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - RABBITMQ_URL=amqp://${RODAN_AMQP_USER}:${RODAN_AMQP_PASSWORD}@rabbitmq:5672/${RODAN_AMQP_VHOST}
+    networks:
+      - internal_rodan
+    volumes:
+      - ./rodan/Rodan:/srv/Rodan
+      - ./var/log:/code/Rodan
+      - rodan_static:/srv/Rodan/staticfiles
+      - rodan_static2:/srv/Rodan/rodan/static
+      - unix_socket:/var/run/unix_socket
+#  rodan-worker:
+#    build:
+#      context: ./Rodan
+#      dockerfile: Dockerfile-worker
+#    container_name: rodan-worker
+#    depends_on:
+#      - rabbitmq
+#      - postgres
+#    networks:
+#      - internal_rodan
+  rabbitmq:
+    container_name: rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RODAN_AMQP_USER}
+      - RABBITMQ_DEFAULT_PASS=${RODAN_AMQP_PASSWORD}
+      - RABBITMQ_DEFAULT_VHOST=${RODAN_AMQP_VHOST}
+    expose:
+      - "5672"
+    image: rabbitmq:3.7
+    networks:
+      - internal_rodan
+  redis:
+    container_name: redis
+    expose:
+      - "6379"
+    image: redis:5.0
+    networks:
+      - internal_rodan
+  postgres:
+    build: ./postgres
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=${RODAN_POSTGRES_SUPERUSER}
+      - POSTGRES_PASSWORD=${RODAN_POSTGRES_SUPERUSER_PASSWORD}
+      - PGDATA=/var/lib/postgresql/data/rodan
+      - RODAN_POSTGRES_DB=${RODAN_POSTGRES_DB}
+      - RODAN_POSTGRES_USER=${RODAN_POSTGRES_USER}
+      - RODAN_POSTGRES_PASSWORD=${RODAN_POSTGRES_PASSWORD}
+    networks:
+      - internal_rodan
+    volumes:
+      - ./postgres/init:/docker-entrypoint-initdb.d
+      - ./var/postgres:/var/lib/postgresql/data/rodan
+networks:
+  internal_rodan:
+volumes:
+  rodan_static:
+  rodan_static2:
+  unix_socket:
