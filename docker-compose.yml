@@ -5,16 +5,33 @@ services:
     container_name: nginx
     depends_on:
       - rodan-server
+      - rodan-websocket
+      - rodan-client
     ports:
       - "8080:80"  # Final port exposed to host
+    restart: always
     volumes:
       - rodan_static:/var/www/static
       - unix_socket:/var/run/unix_socket
+  rodan-client:
+    build:
+      context: ./rodan-client
+      args:
+        DEV_JSPM_GITHUB_AUTH_TOKEN: ${DEV_JSPM_GITHUB_AUTH_TOKEN}
+    container_name: rodan-client
+    environment:
+      - RODAN_CLIENT_DEVELOP_HOST=rodan-client
+    ports:
+      - "8081:9002"
+    restart: always
   rodan-server:
     build:
       context: ./rodan
-      dockerfile: Dockerfile-server
+      args:
+        role: server
+    image: theyang/rodan:dev
     command: bash -c "./manage.py check && ./manage.py migrate && ENVS=`env` ./manage.py collectstatic --clear --noinput && uwsgi --disable-logging -s /var/run/unix_socket/rodan-server.sock --module rodan.wsgi_django:application"
+    container_name: rodan-server
     depends_on:
       - rabbitmq
       - redis
@@ -40,22 +57,88 @@ services:
       - RABBITMQ_URL=amqp://${RODAN_AMQP_USER}:${RODAN_AMQP_PASSWORD}@rabbitmq:5672/${RODAN_AMQP_VHOST}
     networks:
       - internal_rodan
+    restart: always
     volumes:
       - ./rodan/Rodan:/srv/Rodan
       - ./var/log:/code/Rodan
       - rodan_static:/srv/Rodan/staticfiles
       - rodan_static2:/srv/Rodan/rodan/static
       - unix_socket:/var/run/unix_socket
-#  rodan-worker:
-#    build:
-#      context: ./Rodan
-#      dockerfile: Dockerfile-worker
-#    container_name: rodan-worker
-#    depends_on:
-#      - rabbitmq
-#      - postgres
-#    networks:
-#      - internal_rodan
+      - ./var/projects:/srv/Rodan/projects
+  rodan-websocket:
+    image: theyang/rodan:dev
+    command: uwsgi --disable-logging -s /var/run/unix_socket/rodan-websocket.sock --module rodan.wsgi_websocket:application
+    container_name: rodan-websocket
+    depends_on:
+      - rodan-server
+      - rabbitmq
+      - redis
+      - postgres
+    environment:
+      - DJANGO_ADMIN_URL=django_admin
+      - DJANGO_DEBUG_MODE=${DEBUG}
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+      - POSTGRES_DB=${RODAN_POSTGRES_DB}
+      - POSTGRES_USER=${RODAN_POSTGRES_USER}
+      - POSTGRES_PASSWORD=${RODAN_POSTGRES_PASSWORD}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - RODAN_PSQL_SUPERUSER_USERNAME=${RODAN_POSTGRES_SUPERUSER}
+      - RODAN_PSQL_SUPERUSER_PASSWORD=${RODAN_POSTGRES_SUPERUSER_PASSWORD}
+      - DJANGO_MEDIA_ROOT=
+      - DJANGO_ALLOWED_HOSTS=${HOSTNAME}
+      - SSL_COOKIE=False
+      - SSL_COOKIE_DOMAIN=${HOSTNAME}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - RABBITMQ_URL=amqp://${RODAN_AMQP_USER}:${RODAN_AMQP_PASSWORD}@rabbitmq:5672/${RODAN_AMQP_VHOST}
+    networks:
+      - internal_rodan
+    restart: always
+    volumes:
+      - ./rodan/Rodan:/srv/Rodan
+      - ./var/log:/code/Rodan
+      - rodan_static:/srv/Rodan/staticfiles
+      - rodan_static2:/srv/Rodan/rodan/static
+      - unix_socket:/var/run/unix_socket
+      - ./var/projects:/srv/Rodan/projects
+  rodan-worker:
+    image: theyang/rodan:dev
+    container_name: rodan-worker
+    command: celery -A rodan worker -l DEBUG
+    depends_on:
+      - rabbitmq
+      - postgres
+    environment:
+      - C_FORCE_ROOT=true
+      - DJANGO_ADMIN_URL=django_admin
+      - DJANGO_DEBUG_MODE=${DEBUG}
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+      - POSTGRES_DB=${RODAN_POSTGRES_DB}
+      - POSTGRES_USER=${RODAN_POSTGRES_USER}
+      - POSTGRES_PASSWORD=${RODAN_POSTGRES_PASSWORD}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - RODAN_PSQL_SUPERUSER_USERNAME=${RODAN_POSTGRES_SUPERUSER}
+      - RODAN_PSQL_SUPERUSER_PASSWORD=${RODAN_POSTGRES_SUPERUSER_PASSWORD}
+      - DJANGO_MEDIA_ROOT=
+      - DJANGO_ALLOWED_HOSTS=${HOSTNAME}
+      - SSL_COOKIE=False
+      - SSL_COOKIE_DOMAIN=${HOSTNAME}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - RABBITMQ_URL=amqp://${RODAN_AMQP_USER}:${RODAN_AMQP_PASSWORD}@rabbitmq:5672/${RODAN_AMQP_VHOST}
+    networks:
+      - internal_rodan
+    restart: always
+    volumes:
+      - ./rodan/Rodan:/srv/Rodan
+      - ./var/log:/code/Rodan
+      - rodan_static:/srv/Rodan/staticfiles
+      - rodan_static2:/srv/Rodan/rodan/static
+      - ./var/projects:/srv/Rodan/projects
   rabbitmq:
     container_name: rabbitmq
     environment:
@@ -67,6 +150,7 @@ services:
     image: rabbitmq:3.7
     networks:
       - internal_rodan
+    restart: always
   redis:
     container_name: redis
     expose:
@@ -74,6 +158,7 @@ services:
     image: redis:5.0
     networks:
       - internal_rodan
+    restart: always
   postgres:
     build: ./postgres
     container_name: postgres
@@ -86,6 +171,7 @@ services:
       - RODAN_POSTGRES_PASSWORD=${RODAN_POSTGRES_PASSWORD}
     networks:
       - internal_rodan
+    restart: always
     volumes:
       - ./postgres/init:/docker-entrypoint-initdb.d
       - ./var/postgres:/var/lib/postgresql/data/rodan
@@ -95,3 +181,5 @@ volumes:
   rodan_static:
   rodan_static2:
   unix_socket:
+  tmp_rodan_client_node_modules:
+  tmp_rodan_client_develop:
