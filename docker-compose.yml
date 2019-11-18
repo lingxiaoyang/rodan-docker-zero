@@ -55,6 +55,7 @@ services:
       - REDIS_PORT=6379
       - REDIS_DB=0
       - RABBITMQ_URL=amqp://${RODAN_AMQP_USER}:${RODAN_AMQP_PASSWORD}@rabbitmq:5672/${RODAN_AMQP_VHOST}
+      - CELERY_JOB_QUEUE=${CELERY_JOB_QUEUE}
     networks:
       - internal_rodan
     restart: always
@@ -130,6 +131,7 @@ services:
       - REDIS_PORT=6379
       - REDIS_DB=0
       - RABBITMQ_URL=amqp://${RODAN_AMQP_USER}:${RODAN_AMQP_PASSWORD}@rabbitmq:5672/${RODAN_AMQP_VHOST}
+      - CELERY_JOB_QUEUE=${CELERY_JOB_QUEUE}
     networks:
       - internal_rodan
     restart: always
