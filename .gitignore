@@ -2,3 +2,5 @@
 rodan/Rodan
 rodan-client/rodan-client
 var
+*.pyc
+__pycache__

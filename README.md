@@ -2,6 +2,10 @@
 
 Build Rodan docker images from zero.
 
+Default `docker-compose.yml` sets up dev environment.
+
+`docker-compose.prod.yml` sets up prod environment.
+
 
 ## Background
 
@@ -9,28 +13,37 @@ Build Rodan docker images from zero.
 
 A Rodan installation includes one Django server for backend APIs, several Celery workers and one frontend app server.
 
+The dev environment only sets up backend API and frontend server, running Celery tasks in "eager" mode in server process.
+
 
 ## Steps to follow
 
 1. Install Docker CE (community edition) and docker-compose onto your system.
 
-2. Put your Rodan repo into `./rodan/Rodan`. For example:
+2. Fork studio-theyang/Rodan, clone your fork into `./rodan/Rodan`, and add studio-theyang/Rodan as upstream:
 
 ````
-cd rodan; git clone git@github.com:studio-theyang/Rodan.git
+cd rodan
+git clone git@github.com:yourgithubname/Rodan.git
+cd Rodan
+git remote add upstream git@github.com:studio-theyang/Rodan.git
 ````
 
-3. Put your rodan-client repo into `./rodan-client/rodan-client`. For example:
+3. Fork studio-theyang/rodan-client, clone your fork into `./rodan-client/rodan-client`, and add studio-theyang/rodan-client as upstream:
 
 ````
-cd rodan-client; git clone git@github.com:studio-theyang/rodan-client.git
+cd rodan-client
+git clone git@github.com:yourgithubname/rodan-client.git
+cd rodan-client
+git remote add upstream git@github.com:studio-theyang/rodan-client.git
 ````
 
-4. Run `docker-compose build`.
+4. Run `docker-compose build`. (To build prod environment, run `docker-compose -f docker-compose.prod.yml build`)
 
-5. Run `docker-compose up`.
+5. Run `docker-compose up`. (To launch prod environment, run `docker-compose -f docker-compose.prod.yml up`)
 
 6. Wait until things set up. If successful, the server is available at `http://localhost:8080` and the client at `http://localhost:8081`.
+
 
 ## Storage
 
