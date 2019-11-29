@@ -9,4 +9,16 @@ RUN pip install 'psycopg2>=2.7,<2.7.99' --upgrade
 
 RUN pip install uwsgi
 
+# We want to override a few Django settings, but we don't want to touch the upstream setting.py,
+# so we create this local_settings.py elsewhere and add its directory `dev_settings` to PYTHONPATH
+# so that Django can call `import local_settings` to load it (DJANGO_SETTINGS_MODULE).
+#
+# The mirrored_rodan_settings.py is a symlink to the original settings.py, and we create it
+# because we cannot call `from rodan.settings import *` due to the Celery loading code in
+# `/srv/Rodan/rodan/__init__.py` that gets loaded when Python discovers `rodan.settings`.
+ENV PYTHONPATH /dev_settings:/mirrored_settings:$${PYTHONPATH}
+RUN mkdir /mirrored_settings
+RUN ln -s /srv/Rodan/rodan/settings.py /mirrored_settings/mirrored_rodan_settings.py
+ENV DJANGO_SETTINGS_MODULE local_settings
+
 WORKDIR /srv/Rodan
