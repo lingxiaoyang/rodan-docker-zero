@@ -14,7 +14,7 @@ services:
   rodan-server:
     build:
       context: ./rodan
-    command: bash -c "./manage.py check && ./manage.py migrate && ./manage.py runserver 0.0.0.0:8080"
+    command: bash -c "./manage.py check && yes | ./manage.py migrate && ./manage.py runserver 0.0.0.0:8080"
     container_name: rodan-server
     depends_on:
       - postgres
