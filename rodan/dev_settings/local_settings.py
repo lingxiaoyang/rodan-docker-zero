@@ -10,6 +10,9 @@ CELERY_ALWAYS_EAGER = True
 # Propagate exceptions in synchronous task running by default
 CELERY_EAGER_PROPAGATES_EXCEPTIONS = True
 
+# We won't install gm or kdu_compress in dev environment
+ENABLE_DIVA = False
+
 
 # STOP: don't edit further
 ##############################
