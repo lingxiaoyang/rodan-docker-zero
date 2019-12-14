@@ -9,6 +9,9 @@ RUN pip install 'psycopg2>=2.7,<2.7.99' --upgrade
 
 RUN pip install uwsgi
 
+# Fix pybagit permissions (see Rodan .travis.yml)
+RUN chmod -R 755 /usr/local/lib/python2.7/site-packages/pybagit
+
 # We want to override a few Django settings, but we don't want to touch the upstream setting.py,
 # so we create this local_settings.py elsewhere and add its directory `dev_settings` to PYTHONPATH
 # so that Django can call `import local_settings` to load it (DJANGO_SETTINGS_MODULE).
