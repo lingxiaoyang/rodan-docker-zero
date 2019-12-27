@@ -17,6 +17,9 @@ services:
     command: bash -c "./manage.py check && yes | ./manage.py migrate && ./manage.py runserver 0.0.0.0:8080"
     container_name: rodan-server
     depends_on:
+      # Run RabbitMQ to ensure this test doesn't fail:
+      #   test_cancel_retry_redo (Rodan.rodan.test.views.test_workflowrun.WorkflowRunSimpleExecutionTest)
+      - rabbitmq
       - postgres
       - redis
     environment:
@@ -49,6 +52,18 @@ services:
       - ./rodan/Rodan:/srv/Rodan
       - ./var/log:/code/Rodan
       - ./var/projects:/srv/Rodan/projects
+  rabbitmq:
+    container_name: rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RODAN_AMQP_USER}
+      - RABBITMQ_DEFAULT_PASS=${RODAN_AMQP_PASSWORD}
+      - RABBITMQ_DEFAULT_VHOST=${RODAN_AMQP_VHOST}
+    expose:
+      - "5672"
+    image: rabbitmq:3.7
+    networks:
+      - internal_rodan
+    restart: always
   redis:
     container_name: redis
     expose:
