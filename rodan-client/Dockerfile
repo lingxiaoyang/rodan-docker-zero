@@ -16,7 +16,6 @@ RUN yarn install
 ARG DEV_JSPM_GITHUB_AUTH_TOKEN
 RUN cd /rodan-client/node_modules/.bin && ./jspm config registries.github.auth ${DEV_JSPM_GITHUB_AUTH_TOKEN}
 RUN cd /rodan-client/node_modules/.bin && ./jspm install -y
-COPY ./rodan-client /rodan-client
-COPY ./configuration.json /rodan-client/configuration.json
+
 EXPOSE 9002
 CMD /rodan-client/node_modules/.bin/gulp
