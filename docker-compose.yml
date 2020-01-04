@@ -5,12 +5,17 @@ services:
       context: ./rodan-client
       args:
         DEV_JSPM_GITHUB_AUTH_TOKEN: ${DEV_JSPM_GITHUB_AUTH_TOKEN}
+    command: bash -c "cp -f /src/configuration.json /rodan-client/configuration.json && /rodan-client/node_modules/.bin/gulp"
     container_name: rodan-client
     environment:
       - RODAN_CLIENT_DEVELOP_HOST=rodan-client
     ports:
       - "8081:9002"
     restart: always
+    volumes:
+      - ./rodan-client/rodan-client:/rodan-client
+      - /rodan-client/node_modules
+      - ./rodan-client:/src
   rodan-server:
     build:
       context: ./rodan
